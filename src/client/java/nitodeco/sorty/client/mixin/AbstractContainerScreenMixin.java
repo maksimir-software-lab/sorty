@@ -1,5 +1,6 @@
 package nitodeco.sorty.client.mixin;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -44,7 +45,9 @@ public abstract class AbstractContainerScreenMixin {
 			return;
 		}
 
-		if (event.key() == 256) {
+		Minecraft minecraft = Minecraft.getInstance();
+
+		if (event.key() == 256 || minecraft.options.keyInventory.matches(event)) {
 			ClientSortController.cancelMultiplayerSortAndClose();
 		}
 

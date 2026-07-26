@@ -14,7 +14,9 @@ import nitodeco.sorty.inventory.InventoryClickPlanner;
 import nitodeco.sorty.inventory.InventorySortAlgorithm;
 
 public final class MultiplayerSortExecutor {
-	private static final int SETTLE_TICKS = 3;
+	private static final int ACTIONS_PER_TICK = 6;
+	private static final int BATCH_SETTLE_TICKS = 1;
+	private static final int FINAL_SETTLE_TICKS = 3;
 	private static final InventoryClickPlanner.StackOperations<ItemStack> STACK_OPERATIONS = new InventoryClickPlanner.StackOperations<>() {
 		@Override
 		public boolean isEmpty(ItemStack stack) {
@@ -115,7 +117,8 @@ public final class MultiplayerSortExecutor {
 
 		Session session = activeSession;
 
-		if (minecraft.player == null || minecraft.gameMode == null || minecraft.player.containerMenu != session.menu) {
+		if (minecraft.player == null || minecraft.gameMode == null || minecraft.gui.screen() != session.screen
+				|| minecraft.player.containerMenu != session.menu) {
 			activeSession = null;
 
 			return;
@@ -127,33 +130,19 @@ public final class MultiplayerSortExecutor {
 			minecraft.player.sendOverlayMessage(Component.literal("Sorting..."));
 		}
 
-		if (session.clickIndex < session.currentAction().slots().size()) {
-			int sortableSlot = session.currentAction().slots().get(session.clickIndex++);
-			minecraft.gameMode.handleContainerInput(session.menu.containerId, session.menuSlotIds.get(sortableSlot), 0,
-					ContainerInput.PICKUP, minecraft.player);
-
-			if (session.clickIndex == session.currentAction().slots().size()) {
-				session.settleTicks = SETTLE_TICKS;
-			}
-
-			return;
-		}
-
 		if (session.settleTicks-- > 0) {
 			return;
 		}
 
-		if (!session.menu.getCarried().isEmpty() || !matchesExpectedLayout(session)) {
+		if (session.lastCompletedAction >= 0 && (!session.menu.getCarried().isEmpty()
+				|| !matchesExpectedLayout(session, session.lastCompletedAction))) {
 			activeSession = null;
 			minecraft.player.sendOverlayMessage(Component.literal("Sorting stopped: inventory changed"));
 
 			return;
 		}
 
-		session.actionIndex++;
-		session.clickIndex = 0;
-
-		if (session.closeWhenSafe || session.actionIndex == session.actions.size()) {
+		if (session.closeWhenSafe || session.nextAction == session.actions.size()) {
 			boolean shouldClose = session.closeWhenSafe;
 			activeSession = null;
 
@@ -163,12 +152,28 @@ public final class MultiplayerSortExecutor {
 				minecraft.player.sendOverlayMessage(Component.literal("Sorted"));
 			}
 
+			return;
 		}
 
+		int actionsThisTick = 0;
+
+		while (session.nextAction < session.actions.size() && actionsThisTick++ < ACTIONS_PER_TICK) {
+			InventoryClickPlanner.Action<ItemStack> action = session.actions.get(session.nextAction);
+
+			for (int sortableSlot : action.slots()) {
+				minecraft.gameMode.handleContainerInput(session.menu.containerId, session.menuSlotIds.get(sortableSlot),
+						0, ContainerInput.PICKUP, minecraft.player);
+				session.menu.incrementStateId();
+			}
+
+			session.lastCompletedAction = session.nextAction++;
+		}
+
+		session.settleTicks = session.nextAction == session.actions.size() ? FINAL_SETTLE_TICKS : BATCH_SETTLE_TICKS;
 	}
 
-	private static boolean matchesExpectedLayout(Session session) {
-		List<ItemStack> expected = session.currentAction().expectedLayout();
+	private static boolean matchesExpectedLayout(Session session, int actionIndex) {
+		List<ItemStack> expected = session.actions.get(actionIndex).expectedLayout();
 
 		for (int slot = 0; slot < expected.size(); slot++) {
 			ItemStack actualStack = session.menu.getSlot(session.menuSlotIds.get(slot)).getItem();
@@ -189,8 +194,8 @@ public final class MultiplayerSortExecutor {
 		private final AbstractContainerMenu menu;
 		private final List<Integer> menuSlotIds;
 		private final List<InventoryClickPlanner.Action<ItemStack>> actions;
-		private int actionIndex;
-		private int clickIndex;
+		private int nextAction;
+		private int lastCompletedAction = -1;
 		private int settleTicks;
 		private int elapsedTicks;
 		private boolean closeWhenSafe;
@@ -205,10 +210,6 @@ public final class MultiplayerSortExecutor {
 			this.menu = menu;
 			this.menuSlotIds = menuSlotIds;
 			this.actions = actions;
-		}
-
-		private InventoryClickPlanner.Action<ItemStack> currentAction() {
-			return actions.get(actionIndex);
 		}
 	}
 }
