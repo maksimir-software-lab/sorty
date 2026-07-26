@@ -26,7 +26,14 @@ public final class SortyClientGameTest implements FabricClientGameTest {
 
 	@Override
 	public void runTest(ClientGameTestContext context) {
-		context.runOnClient(SortyClientGameTest::assertKnownLocaleIds);
+		context.runOnClient(client -> {
+			client.options.renderDistance().set(2);
+			client.options.simulationDistance().set(5);
+			client.options.mipmapLevels().set(0);
+			client.options.enableVsync().set(false);
+			client.options.entityShadows().set(false);
+			assertKnownLocaleIds(client);
+		});
 
 		try (TestSingleplayerContext singleplayer = context.worldBuilder().create()) {
 			singleplayer.getClientLevel().waitForChunksRender();

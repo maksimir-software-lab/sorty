@@ -117,7 +117,7 @@ public final class MultiplayerSortExecutor {
 
 		Session session = activeSession;
 
-		if (minecraft.player == null || minecraft.gameMode == null || minecraft.gui.screen() != session.screen
+		if (minecraft.player == null || minecraft.gameMode == null || minecraft.screen != session.screen
 				|| minecraft.player.containerMenu != session.menu) {
 			activeSession = null;
 
