@@ -179,6 +179,10 @@ tasks.register("runProductionClientGameTest", net.fabricmc.loom.task.prod.Client
 	useXVFB = System.getenv("CI") != null
 			&& System.getenv("DISPLAY") == null
 			&& System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("linux")
+
+	if (System.getenv("CI") != null) {
+		programArgs.addAll("--width", "320", "--height", "240")
+	}
 }
 
 processResources {
