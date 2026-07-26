@@ -175,7 +175,7 @@ jobs:
           ./gradlew build
           gametest_passed=false
           for attempt in 1 2 3; do
-            if ./gradlew runProductionClientGameTest; then
+            if xvfb-run -a -s "-screen 0 640x480x24" ./gradlew runProductionClientGameTest; then
               gametest_passed=true
               break
             fi
