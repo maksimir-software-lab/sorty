@@ -2,7 +2,7 @@
   <img src="src/main/resources/assets/sorty/icon.png" alt="Sorty icon" width="128">
 </p>
 
-# Sorty
+# Sorty - Simple inventory sorting
 
 <p align="center">
   <a href="https://github.com/maksimir-software-lab/sorty/releases">
@@ -14,25 +14,17 @@
   </a>
 </p>
 
-A Fabric mod for Minecraft Java Edition 26.2.
+Sorty is a lightweight, client-side mod that adds fast inventory sorting. The default keybind is the middle mouse button. When sorting an inventory, items are sorted by amount and type. Incomplete stacks of the same item are merged to free more inventory space. Items are grouped by type: Ingots are sorted with ingots, logs with logs, planks with planks.  
 
-Middle-click a storage slot in the player inventory, a chest-style container,
-or a shulker box to merge compatible partial stacks and sort that storage area
-by item type. Ingots stay with ingots, slabs with slabs, tools with matching
-tools, and logs with their stripped variants.
+## Multiplayer
 
-In the player inventory, only the 27-slot main inventory is sorted; the hotbar,
-equipment, crafting slots, and offhand remain untouched. In container screens,
-only the opened chest or shulker storage is sorted, not the player's inventory.
-Sorting is ignored while carrying a cursor stack.
+Sorty is entirely client-side, you don't need to install it on a server for it to work. Sorting is a bit slower on multiplayer due to rate limits, although in most cases it should feel near-instant.
 
-In singleplayer, Sorty applies the completed layout atomically through the
-integrated server. On multiplayer servers, it performs paced vanilla inventory
-clicks and does not need to be installed on the server. Keep the inventory
-screen open until sorting finishes; pressing Escape waits until the cursor is
-safe before closing it.
+## Compatibility
 
-## Build
+Sorty is compatible with almost every mod, except with other inventory sorting mods.
+
+## Development
 
 The development toolchain is pinned in `mise.toml`. With mise-en-place:
 

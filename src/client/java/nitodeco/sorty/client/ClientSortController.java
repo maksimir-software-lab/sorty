@@ -23,10 +23,10 @@ public final class ClientSortController {
 		MultiplayerSortExecutor.requestCancelAndClose();
 	}
 
-	public static boolean trySort(AbstractContainerScreen<?> screen, Slot clickedSlot) {
+	public static boolean trySort(AbstractContainerScreen<?> screen) {
 		Minecraft minecraft = Minecraft.getInstance();
 
-		if (minecraft.player == null || clickedSlot == null || !isSortableTarget(screen, clickedSlot, minecraft)) {
+		if (minecraft.player == null || !isSortableScreen(screen)) {
 			return false;
 		}
 
@@ -56,18 +56,8 @@ public final class ClientSortController {
 		return screen.getMenu().slots.stream().filter(slot -> slot.container == firstStorageSlot.container).toList();
 	}
 
-	private static boolean isSortableTarget(AbstractContainerScreen<?> screen, Slot clickedSlot, Minecraft minecraft) {
-
-		if (screen instanceof InventoryScreen) {
-			return clickedSlot.container == minecraft.player.getInventory()
-					&& clickedSlot.getContainerSlot() >= PlayerInventorySorter.MAIN_INVENTORY_START
-					&& clickedSlot.getContainerSlot() < PlayerInventorySorter.MAIN_INVENTORY_END;
-		}
-
-		if (!(screen.getMenu() instanceof ChestMenu || screen.getMenu() instanceof ShulkerBoxMenu)) {
-			return false;
-		}
-
-		return clickedSlot.container != minecraft.player.getInventory();
+	private static boolean isSortableScreen(AbstractContainerScreen<?> screen) {
+		return screen instanceof InventoryScreen || screen.getMenu() instanceof ChestMenu
+				|| screen.getMenu() instanceof ShulkerBoxMenu;
 	}
 }

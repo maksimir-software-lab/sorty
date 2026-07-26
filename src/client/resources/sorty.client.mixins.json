@@ -3,7 +3,6 @@
 	"package": "nitodeco.sorty.client.mixin",
 	"compatibilityLevel": "JAVA_25",
 	"client": [
-		"AbstractContainerScreenAccessor",
 		"AbstractContainerScreenMixin"
 	],
 	"injectors": {

@@ -6,6 +6,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 public class SortyClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
+		SortyKeyMappings.register();
 		ClientTickEvents.END_CLIENT_TICK.register(MultiplayerSortExecutor::tick);
 	}
 }
