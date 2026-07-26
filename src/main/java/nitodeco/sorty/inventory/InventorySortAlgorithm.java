@@ -137,19 +137,16 @@ public final class InventorySortAlgorithm {
 
 	interface StackOperations<T> {
 		boolean isEmpty(T stack);
+		boolean canMerge(T first, T second);
 
 		int count(T stack);
-
 		int maximumCount(T stack);
 
 		T copyWithCount(T stack, int count);
-
-		boolean canMerge(T first, T second);
+		T empty();
 
 		ItemTypeClassifier.SortKey sortKey(T stack);
 
 		String tieBreakKey(T stack);
-
-		T empty();
 	}
 }
