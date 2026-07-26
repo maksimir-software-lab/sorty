@@ -38,3 +38,19 @@ Alternatively, build directly with JDK 25:
 ```powershell
 .\gradlew.bat build
 ```
+
+### Minecraft integration test
+
+Run the Fabric client GameTest to launch the production-remapped mod in the
+configured Minecraft version, create a singleplayer world, and verify that the
+client starts successfully:
+
+```powershell
+.\gradlew.bat runProductionClientGameTest
+```
+
+On Unix-like systems:
+
+```sh
+./gradlew runProductionClientGameTest
+```

@@ -41,3 +41,15 @@ jobs:
         run: uv run --frozen scripts/test_release.py
       - name: build
         run: ./gradlew build
+      - name: run Minecraft client integration test
+        run: ./gradlew runProductionClientGameTest
+      - name: capture Minecraft client integration test output
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: Minecraft-client-test-output
+          path: |
+            build/run/clientGameTest/logs/
+            build/run/clientGameTest/crash-reports/
+            build/run/clientGameTest/screenshots/
+          if-no-files-found: ignore

@@ -1,0 +1,18 @@
+{
+	"schemaVersion": 1,
+	"id": "sorty-gametest",
+	"version": "1.0.0",
+	"name": "Sorty GameTest",
+	"environment": "client",
+	"entrypoints": {
+		"fabric-client-gametest": [
+			"nitodeco.sorty.gametest.SortyClientGameTest"
+		]
+	},
+	"depends": {
+		"fabricloader": "*",
+		"minecraft": "*",
+		"fabric-api": "*",
+		"sorty": "*"
+	}
+}

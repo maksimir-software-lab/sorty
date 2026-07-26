@@ -26,6 +26,16 @@ loom {
 	}
 }
 
+fabricApi {
+	configureTests {
+		createSourceSet = true
+		modId = "sorty-gametest"
+		enableGameTests = false
+		enableClientGameTests = true
+		eula = true
+	}
+}
+
 dependencies {
 	// To change the versions see the gradle.properties file
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
@@ -33,6 +43,7 @@ dependencies {
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	productionRuntimeMods "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
 	testImplementation platform("org.junit:junit-bom:5.13.4")
 	testImplementation "org.junit.jupiter:junit-jupiter"
@@ -145,6 +156,28 @@ spotless {
 
 test {
 	useJUnitPlatform()
+}
+
+def gametestJar = tasks.register("gametestJar", Jar) {
+	archiveClassifier = "gametest"
+	destinationDirectory = layout.buildDirectory.dir("gametest")
+	from sourceSets.gametest.output
+}
+
+def clientGameTestRunDirectory = layout.buildDirectory.dir("run/clientGameTest")
+
+def deleteProductionClientGameTestRunDir = tasks.register("deleteProductionClientGameTestRunDir", Delete) {
+	delete clientGameTestRunDirectory
+}
+
+tasks.register("runProductionClientGameTest", net.fabricmc.loom.task.prod.ClientProductionRunTask) {
+	dependsOn deleteProductionClientGameTestRunDir
+	dependsOn gametestJar
+	mods.from gametestJar.flatMap { it.archiveFile }
+	jvmArgs.add("-Dfabric.client.gametest")
+	runDir = clientGameTestRunDirectory
+	useXVFB = System.getenv("CI") != null
+			&& System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("linux")
 }
 
 processResources {
