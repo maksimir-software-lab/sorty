@@ -9,6 +9,7 @@ The complete toolchain is pinned in `mise.toml`:
 
 ```powershell
 mise install
+mise run install-hooks
 mise exec -- .\gradlew.bat build
 mise run test-release
 ```
@@ -46,6 +47,25 @@ mise run check-actions
 
 Commit any changes produced by the formatters. All three checks must complete
 without errors before you open the pull request.
+
+## Pre-commit checks
+
+Lefthook runs formatting, linting, and regular unit tests before every commit.
+The test stage runs the Java and release-tool tests, but does not launch the
+Minecraft GameTest client.
+
+Install or refresh the hook after cloning or updating the toolchain:
+
+```powershell
+mise install
+mise run install-hooks
+```
+
+Run the complete hook manually with:
+
+```powershell
+mise exec -- lefthook run pre-commit
+```
 
 ## Branches
 

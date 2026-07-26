@@ -1,0 +1,13 @@
+pre-commit:
+  piped: true
+  commands:
+    format:
+      priority: 1
+      run: mise run format
+      stage_fixed: true
+    lint:
+      priority: 2
+      run: mise run lint
+    test:
+      priority: 3
+      run: mise run test

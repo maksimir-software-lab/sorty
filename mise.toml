@@ -5,6 +5,46 @@ java = "microsoft-25.0.4"
 python = "3.12.13"
 uv = "0.11.32"
 actionlint = "1.7.12"
+lefthook = "2.1.10"
+
+[tasks.install-hooks]
+description = "Install repository Git hooks"
+run = "lefthook install"
+
+[tasks.format]
+description = "Format project files"
+run = [
+	"uv run --frozen ruff format scripts",
+	"./gradlew spotlessApply",
+]
+run_windows = [
+	"uv run --frozen ruff format scripts",
+	".\\gradlew.bat spotlessApply",
+]
+
+[tasks.lint]
+description = "Run all linters"
+run = [
+	"./gradlew spotlessCheck",
+	{ task = "lint-python" },
+	{ task = "check-actions" },
+]
+run_windows = [
+	".\\gradlew.bat spotlessCheck",
+	{ task = "lint-python" },
+	{ task = "check-actions" },
+]
+
+[tasks.test]
+description = "Run regular tests"
+run = [
+	"./gradlew test",
+	{ task = "test-release" },
+]
+run_windows = [
+	".\\gradlew.bat test",
+	{ task = "test-release" },
+]
 
 [tasks.test-release]
 description = "Run release test"

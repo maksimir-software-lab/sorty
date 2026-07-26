@@ -30,6 +30,7 @@ The development toolchain is pinned in `mise.toml`. With mise-en-place:
 
 ```powershell
 mise install
+mise run install-hooks
 mise exec -- .\gradlew.bat build
 ```
 
