@@ -99,6 +99,10 @@ class ReleaseIdentity:
         )
 
     @property
+    def github_title(self) -> str:
+        return f"{self.mod_version} ({self.minecraft_version})"
+
+    @property
     def primary_artifact(self) -> str:
         return f"{self.tag}.jar"
 
@@ -369,6 +373,7 @@ def discover(args: argparse.Namespace) -> int:
                     "mod_loader": identity.mod_loader,
                     "tag": identity.tag,
                     "title": identity.title,
+                    "github_title": identity.github_title,
                     "release_type": identity.release_type,
                     "primary_artifact": identity.primary_artifact,
                     "sources_artifact": identity.sources_artifact,

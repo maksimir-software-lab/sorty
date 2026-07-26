@@ -218,7 +218,8 @@ jobs:
           GH_REPO: ${{ github.repository }}
           TAG: ${{ matrix.release.tag }}
           SHA: ${{ matrix.release.sha }}
-          TITLE: ${{ matrix.release.title }}
+          TAG_TITLE: ${{ matrix.release.title }}
+          RELEASE_TITLE: ${{ matrix.release.github_title }}
           RELEASE_TYPE: ${{ matrix.release.release_type }}
         run: |
           existing_target="$(git -C source rev-list -n 1 "$TAG" 2>/dev/null || true)"
@@ -229,7 +230,7 @@ jobs:
           if [ -z "$existing_target" ]; then
             git -C source config user.name "github-actions[bot]"
             git -C source config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git -C source tag -a "$TAG" "$SHA" -m "$TITLE"
+            git -C source tag -a "$TAG" "$SHA" -m "$TAG_TITLE"
             git -C source push origin "refs/tags/$TAG"
           fi
 
@@ -245,10 +246,10 @@ jobs:
               exit 1
             fi
             gh release edit "$TAG" \
-              --title "$TITLE" \
+              --title "$RELEASE_TITLE" \
               --notes-file release-notes.md
           else
-            args=(--draft --target "$SHA" --title "$TITLE" --notes-file release-notes.md)
+            args=(--draft --target "$SHA" --title "$RELEASE_TITLE" --notes-file release-notes.md)
             if [ "$expected_prerelease" = true ]; then
               args+=(--prerelease)
             fi

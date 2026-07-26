@@ -55,6 +55,8 @@ class IdentityTest(unittest.TestCase):
     def test_stable_names(self):
         identity = ReleaseIdentity("26.2", SemVer.parse("1.0.1"))
         self.assertEqual("sorty-1.0.1+26.2-fabric", identity.tag)
+        self.assertEqual("1.0.1 (26.2)", identity.github_title)
+        self.assertEqual("Sorty 1.0.1 for Minecraft 26.2 (fabric)", identity.title)
         self.assertEqual("sorty-1.0.1+26.2-fabric.jar", identity.primary_artifact)
         self.assertEqual(
             "sorty-1.0.1+26.2-fabric-sources.jar", identity.sources_artifact
