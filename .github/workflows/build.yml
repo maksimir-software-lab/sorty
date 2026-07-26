@@ -43,7 +43,7 @@ jobs:
         run: ./gradlew build
 
   minecraft-integration-test:
-    name: Minecraft integration test
+    name: mc integration test
     needs: build
     runs-on: ubuntu-24.04
     steps:
@@ -58,7 +58,7 @@ jobs:
           distribution: 'microsoft'
       - name: make gradle wrapper executable
         run: chmod +x ./gradlew
-      - name: run Minecraft client integration test
+      - name: mc integration test
         run: ./gradlew runProductionClientGameTest
       - name: capture Minecraft client integration test output
         if: always()
