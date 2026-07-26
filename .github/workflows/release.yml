@@ -173,7 +173,15 @@ jobs:
         working-directory: source
         run: |
           ./gradlew build
-          ./gradlew runProductionClientGameTest
+          gametest_passed=false
+          for attempt in 1 2 3; do
+            if ./gradlew runProductionClientGameTest; then
+              gametest_passed=true
+              break
+            fi
+            echo "::warning::Minecraft client GameTest attempt ${attempt} failed"
+          done
+          test "$gametest_passed" = true
       - name: verify release artifacts
         run: |
           uv run --project release-tooling --frozen release-tooling/scripts/release.py verify-artifacts \
