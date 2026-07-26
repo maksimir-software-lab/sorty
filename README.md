@@ -1,9 +1,19 @@
 # Sorty
 
-## Setup
+A Fabric mod for Minecraft Java Edition 26.2.
 
-For setup instructions, please see the [Fabric Documentation page](https://docs.fabricmc.net/develop/getting-started/creating-a-project#setting-up) related to the IDE that you are using.
+Open the player inventory and middle-click any slot in the 27-slot main
+inventory to merge compatible partial stacks and sort the inventory by item
+type. Ingots stay with ingots, slabs with slabs, tools with matching tools, and
+logs with their stripped variants. The hotbar, equipment, crafting slots,
+offhand, and cursor stack are left untouched.
 
-## License
+Sorty must be installed on both the client and server in multiplayer.
 
-This template is available under the CC0 license. Feel free to learn from it and incorporate it in your own projects.
+## Build
+
+Build with JDK 25:
+
+```powershell
+.\gradlew.bat build
+```

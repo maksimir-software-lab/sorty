@@ -13,7 +13,7 @@ main inventory when the player middle-clicks an inventory item.
 - Do not change the hotbar, armor slots, offhand slot, crafting grid, or item
   currently held by the cursor.
 - Merge compatible partial stacks before sorting.
-- Sort non-empty stacks alphabetically by item name.
+- Group non-empty stacks by item form/type before sorting within each group.
 - Place empty slots after all non-empty stacks.
 - Consume the triggering middle-click so vanilla middle-click behavior does not
   also run.
@@ -43,9 +43,19 @@ operation.
 
 ## Sorting order
 
-For the MVP, use a deterministic, case-insensitive item-name key with the
-registry identifier as a tie-breaker. Stacks of the same item that differ in
-components must remain distinct but adjacent where practical.
+Use a deterministic type-first order. Resource forms such as raw materials,
+ingots, nuggets, gems, dusts, and ores are grouped by form. Building forms use
+the order full blocks, slabs, stairs, walls, fences, gates, doors, trapdoors,
+signs, buttons, and pressure plates. Finished equipment is grouped by function,
+so pickaxes remain with pickaxes rather than with other items of the same
+material.
+
+Logs, stripped logs, wood, stripped wood, stems, and hyphae share one log group.
+Within that group, variants of each wood type remain together in the order
+natural log/stem, stripped log/stem, natural wood/hyphae, stripped wood/hyphae.
+The registry identifier is the final tie-breaker. Custom names and other
+components do not change an item's type placement; incompatible component
+variants remain distinct but adjacent.
 
 ## Safety requirements
 

@@ -3,14 +3,10 @@
 	"id": "sorty",
 	"version": "${version}",
 	"name": "Sorty",
-	"description": "This is an example description! Tell everyone what your mod is about!",
+	"description": "Middle-click the main player inventory to merge stacks and sort items by type.",
 	"authors": [
-		"Me!"
+		"Nico"
 	],
-	"contact": {
-		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/FabricMC/fabric-example-mod"
-	},
 	"license": "CC0-1.0",
 	"icon": "assets/sorty/icon.png",
 	"environment": "*",
@@ -23,7 +19,6 @@
 		]
 	},
 	"mixins": [
-		"sorty.mixins.json",
 		{
 			"config": "sorty.client.mixins.json",
 			"environment": "client"
