@@ -10,7 +10,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.Item;
@@ -235,7 +235,7 @@ public final class SortyClientGameTest implements FabricClientGameTest {
 		var languageResources = client.getResourceManager().listResources("lang",
 				id -> id.getNamespace().equals("sorty") && id.getPath().endsWith(".json"));
 
-		for (Identifier resourceId : languageResources.keySet()) {
+		for (ResourceLocation resourceId : languageResources.keySet()) {
 			String path = resourceId.getPath();
 			String localeId = path.substring("lang/".length(), path.length() - ".json".length());
 

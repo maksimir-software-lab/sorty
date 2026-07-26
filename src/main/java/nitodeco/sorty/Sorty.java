@@ -3,7 +3,7 @@ package nitodeco.sorty;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import nitodeco.sorty.inventory.PlayerInventorySorter;
 import nitodeco.sorty.network.SortInventoryPayload;
 import org.slf4j.Logger;
@@ -22,7 +22,7 @@ public class Sorty implements ModInitializer {
 		LOGGER.info("Sorty initialized");
 	}
 
-	public static Identifier id(String path) {
-		return Identifier.fromNamespaceAndPath(MOD_ID, path);
+	public static ResourceLocation id(String path) {
+		return ResourceLocation.fromNamespaceAndPath(MOD_ID, path);
 	}
 }

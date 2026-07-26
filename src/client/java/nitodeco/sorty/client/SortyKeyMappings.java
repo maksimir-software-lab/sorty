@@ -3,12 +3,12 @@ package nitodeco.sorty.client;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.KeyMapping;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import org.lwjgl.glfw.GLFW;
 
 public final class SortyKeyMappings {
 	private static final KeyMapping.Category CATEGORY = KeyMapping.Category
-			.register(Identifier.fromNamespaceAndPath("sorty", "sorty"));
+			.register(ResourceLocation.fromNamespaceAndPath("sorty", "sorty"));
 
 	private static KeyMapping sortInventory;
 
