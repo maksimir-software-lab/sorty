@@ -1,0 +1,214 @@
+package nitodeco.sorty.client;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ContainerInput;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
+import nitodeco.sorty.inventory.InventoryClickPlanner;
+import nitodeco.sorty.inventory.InventorySortAlgorithm;
+
+public final class MultiplayerSortExecutor {
+	private static final int SETTLE_TICKS = 3;
+	private static final InventoryClickPlanner.StackOperations<ItemStack> STACK_OPERATIONS = new InventoryClickPlanner.StackOperations<>() {
+		@Override
+		public boolean isEmpty(ItemStack stack) {
+			return stack.isEmpty();
+		}
+
+		@Override
+		public boolean canMerge(ItemStack first, ItemStack second) {
+			return ItemStack.isSameItemSameComponents(first, second);
+		}
+
+		@Override
+		public int count(ItemStack stack) {
+			return stack.getCount();
+		}
+
+		@Override
+		public int maximumCount(ItemStack stack) {
+			return stack.getMaxStackSize();
+		}
+
+		@Override
+		public ItemStack copyWithCount(ItemStack stack, int count) {
+			return stack.copyWithCount(count);
+		}
+
+		@Override
+		public ItemStack empty() {
+			return ItemStack.EMPTY;
+		}
+	};
+
+	private static Session activeSession;
+
+	private MultiplayerSortExecutor() {
+	}
+
+	public static boolean start(AbstractContainerScreen<?> screen, List<Slot> sortableSlots) {
+		Minecraft minecraft = Minecraft.getInstance();
+
+		if (activeSession != null || minecraft.player == null || minecraft.gameMode == null
+				|| !screen.getMenu().getCarried().isEmpty()) {
+			return false;
+		}
+
+		List<Slot> orderedSlots = sortableSlots.stream().sorted(Comparator.comparingInt(Slot::getContainerSlot))
+				.toList();
+		List<ItemStack> source = orderedSlots.stream().map(slot -> slot.getItem().copy()).toList();
+		List<InventoryClickPlanner.Action<ItemStack>> actions;
+
+		try {
+			List<ItemStack> target = InventorySortAlgorithm.sortItemStacks(source);
+			actions = InventoryClickPlanner.plan(source, target, STACK_OPERATIONS);
+		} catch (IllegalArgumentException invalidInventory) {
+			return false;
+		}
+
+		if (actions.isEmpty()) {
+			return true;
+		}
+
+		AbstractContainerMenu menu = screen.getMenu();
+		List<Integer> menuSlotIds = new ArrayList<>(orderedSlots.size());
+
+		for (Slot slot : orderedSlots) {
+			int menuSlot = menu.slots.indexOf(slot);
+
+			if (menuSlot < 0) {
+				return false;
+			}
+
+			menuSlotIds.add(menuSlot);
+		}
+
+		activeSession = new Session(screen, menu, List.copyOf(menuSlotIds), actions);
+		minecraft.player.sendOverlayMessage(Component.literal("Sorting..."));
+
+		return true;
+	}
+
+	public static boolean isActive() {
+		return activeSession != null;
+	}
+
+	public static void requestCancelAndClose() {
+
+		if (activeSession != null) {
+			activeSession.closeWhenSafe = true;
+		}
+
+	}
+
+	public static void tick(Minecraft minecraft) {
+
+		if (activeSession == null) {
+			return;
+		}
+
+		Session session = activeSession;
+
+		if (minecraft.player == null || minecraft.gameMode == null || minecraft.player.containerMenu != session.menu) {
+			activeSession = null;
+
+			return;
+		}
+
+		session.elapsedTicks++;
+
+		if (session.elapsedTicks % 20 == 0) {
+			minecraft.player.sendOverlayMessage(Component.literal("Sorting..."));
+		}
+
+		if (session.clickIndex < session.currentAction().slots().size()) {
+			int sortableSlot = session.currentAction().slots().get(session.clickIndex++);
+			minecraft.gameMode.handleContainerInput(session.menu.containerId, session.menuSlotIds.get(sortableSlot), 0,
+					ContainerInput.PICKUP, minecraft.player);
+
+			if (session.clickIndex == session.currentAction().slots().size()) {
+				session.settleTicks = SETTLE_TICKS;
+			}
+
+			return;
+		}
+
+		if (session.settleTicks-- > 0) {
+			return;
+		}
+
+		if (!session.menu.getCarried().isEmpty() || !matchesExpectedLayout(session)) {
+			activeSession = null;
+			minecraft.player.sendOverlayMessage(Component.literal("Sorting stopped: inventory changed"));
+
+			return;
+		}
+
+		session.actionIndex++;
+		session.clickIndex = 0;
+
+		if (session.closeWhenSafe || session.actionIndex == session.actions.size()) {
+			boolean shouldClose = session.closeWhenSafe;
+			activeSession = null;
+
+			if (shouldClose) {
+				session.screen.onClose();
+			} else {
+				minecraft.player.sendOverlayMessage(Component.literal("Sorted"));
+			}
+
+		}
+
+	}
+
+	private static boolean matchesExpectedLayout(Session session) {
+		List<ItemStack> expected = session.currentAction().expectedLayout();
+
+		for (int slot = 0; slot < expected.size(); slot++) {
+			ItemStack actualStack = session.menu.getSlot(session.menuSlotIds.get(slot)).getItem();
+			ItemStack expectedStack = expected.get(slot);
+
+			if (actualStack.getCount() != expectedStack.getCount()
+					|| !ItemStack.isSameItemSameComponents(actualStack, expectedStack)) {
+				return false;
+			}
+
+		}
+
+		return true;
+	}
+
+	private static final class Session {
+		private final AbstractContainerScreen<?> screen;
+		private final AbstractContainerMenu menu;
+		private final List<Integer> menuSlotIds;
+		private final List<InventoryClickPlanner.Action<ItemStack>> actions;
+		private int actionIndex;
+		private int clickIndex;
+		private int settleTicks;
+		private int elapsedTicks;
+		private boolean closeWhenSafe;
+
+		private Session(
+			AbstractContainerScreen<?> screen,
+			AbstractContainerMenu menu,
+			List<Integer> menuSlotIds,
+			List<InventoryClickPlanner.Action<ItemStack>> actions
+		) {
+			this.screen = screen;
+			this.menu = menu;
+			this.menuSlotIds = menuSlotIds;
+			this.actions = actions;
+		}
+
+		private InventoryClickPlanner.Action<ItemStack> currentAction() {
+			return actions.get(actionIndex);
+		}
+	}
+}

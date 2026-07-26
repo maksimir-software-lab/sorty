@@ -1,5 +1,6 @@
 package nitodeco.sorty.client;
 
+import java.util.List;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -14,6 +15,14 @@ public final class ClientSortController {
 	private ClientSortController() {
 	}
 
+	public static boolean isMultiplayerSortActive() {
+		return MultiplayerSortExecutor.isActive();
+	}
+
+	public static void cancelMultiplayerSortAndClose() {
+		MultiplayerSortExecutor.requestCancelAndClose();
+	}
+
 	public static boolean trySort(AbstractContainerScreen<?> screen, Slot clickedSlot) {
 		Minecraft minecraft = Minecraft.getInstance();
 
@@ -21,11 +30,30 @@ public final class ClientSortController {
 			return false;
 		}
 
-		if (screen.getMenu().getCarried().isEmpty() && ClientPlayNetworking.canSend(SortInventoryPayload.TYPE)) {
+		if (!screen.getMenu().getCarried().isEmpty()) {
+			return true;
+		}
+
+		if (minecraft.hasSingleplayerServer() && ClientPlayNetworking.canSend(SortInventoryPayload.TYPE)) {
 			ClientPlayNetworking.send(SortInventoryPayload.INSTANCE);
+		} else if (!minecraft.hasSingleplayerServer()) {
+			MultiplayerSortExecutor.start(screen, sortableSlots(screen, minecraft));
 		}
 
 		return true;
+	}
+
+	private static List<Slot> sortableSlots(AbstractContainerScreen<?> screen, Minecraft minecraft) {
+
+		if (screen instanceof InventoryScreen) {
+			return screen.getMenu().slots.stream().filter(slot -> slot.container == minecraft.player.getInventory())
+					.filter(slot -> slot.getContainerSlot() >= PlayerInventorySorter.MAIN_INVENTORY_START)
+					.filter(slot -> slot.getContainerSlot() < PlayerInventorySorter.MAIN_INVENTORY_END).toList();
+		}
+
+		Slot firstStorageSlot = screen.getMenu().slots.getFirst();
+
+		return screen.getMenu().slots.stream().filter(slot -> slot.container == firstStorageSlot.container).toList();
 	}
 
 	private static boolean isSortableTarget(AbstractContainerScreen<?> screen, Slot clickedSlot, Minecraft minecraft) {

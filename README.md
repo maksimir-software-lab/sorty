@@ -12,7 +12,11 @@ equipment, crafting slots, and offhand remain untouched. In container screens,
 only the opened chest or shulker storage is sorted, not the player's inventory.
 Sorting is ignored while carrying a cursor stack.
 
-Sorty must be installed on both the client and server in multiplayer.
+In singleplayer, Sorty applies the completed layout atomically through the
+integrated server. On multiplayer servers, it performs paced vanilla inventory
+clicks and does not need to be installed on the server. Keep the inventory
+screen open until sorting finishes; pressing Escape waits until the cursor is
+safe before closing it.
 
 ## Build
 

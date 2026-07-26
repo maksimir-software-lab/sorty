@@ -3,7 +3,7 @@
 	"id": "sorty",
 	"version": "${version}",
 	"name": "Sorty",
-	"description": "Middle-click player, chest, and shulker storage to merge stacks and sort items by type.",
+	"description": "Client-side inventory, chest, and shulker sorting with atomic singleplayer support.",
 	"authors": [
 		"Nico"
 	],

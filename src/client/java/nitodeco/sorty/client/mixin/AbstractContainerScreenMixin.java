@@ -1,6 +1,7 @@
 package nitodeco.sorty.client.mixin;
 
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.world.inventory.Slot;
 import nitodeco.sorty.client.ClientSortController;
@@ -18,6 +19,12 @@ public abstract class AbstractContainerScreenMixin {
 		CallbackInfoReturnable<Boolean> callback
 	) {
 
+		if (ClientSortController.isMultiplayerSortActive()) {
+			callback.setReturnValue(true);
+
+			return;
+		}
+
 		if (event.button() != 2) {
 			return;
 		}
@@ -28,5 +35,19 @@ public abstract class AbstractContainerScreenMixin {
 			callback.setReturnValue(true);
 		}
 
+	}
+
+	@Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true)
+	private void sorty$lockInputDuringSort(KeyEvent event, CallbackInfoReturnable<Boolean> callback) {
+
+		if (!ClientSortController.isMultiplayerSortActive()) {
+			return;
+		}
+
+		if (event.key() == 256) {
+			ClientSortController.cancelMultiplayerSortAndClose();
+		}
+
+		callback.setReturnValue(true);
 	}
 }
