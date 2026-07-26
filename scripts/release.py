@@ -203,6 +203,7 @@ def release_candidate(
     modrinth_version_numbers: Iterable[str],
     published_modrinth_version_numbers: Iterable[str] = (),
     listed_modrinth_version_numbers: Iterable[str] = (),
+    require_modrinth: bool = True,
 ) -> tuple[str, str | None]:
     published: dict[str, SemVer] = {}
     for tag in set(published_github_tags) | set(published_modrinth_version_numbers):
@@ -234,7 +235,7 @@ def release_candidate(
         latest
         and identity.mod_version._key() == latest[1]._key()
         and github_published
-        and modrinth_listed
+        and (modrinth_listed or not require_modrinth)
     ):
         return "complete", previous
 
@@ -268,8 +269,12 @@ def discover(args: argparse.Namespace) -> int:
         release["tag_name"] for release in releases if not release.get("draft", False)
     }
     all_release_tags = {release["tag_name"] for release in releases}
-    modrinth = modrinth_versions(
-        args.modrinth_project_id, os.environ.get("MODRINTH_TOKEN")
+    modrinth = (
+        []
+        if args.skip_modrinth
+        else modrinth_versions(
+            args.modrinth_project_id, os.environ.get("MODRINTH_TOKEN")
+        )
     )
     modrinth_numbers = {version["version_number"] for version in modrinth}
     published_modrinth_numbers = {
@@ -327,6 +332,7 @@ def discover(args: argparse.Namespace) -> int:
                 modrinth_version_numbers=modrinth_numbers,
                 published_modrinth_version_numbers=published_modrinth_numbers,
                 listed_modrinth_version_numbers=listed_modrinth_numbers,
+                require_modrinth=not args.skip_modrinth,
             )
             if state == "complete":
                 skipped.append({"branch": branch, "reason": "already published"})
@@ -562,6 +568,7 @@ def build_parser() -> argparse.ArgumentParser:
     discover_parser = subparsers.add_parser("discover")
     discover_parser.add_argument("--repository", required=True)
     discover_parser.add_argument("--modrinth-project-id", required=True)
+    discover_parser.add_argument("--skip-modrinth", action="store_true")
     discover_parser.add_argument("--output", required=True)
     discover_parser.set_defaults(handler=discover)
 

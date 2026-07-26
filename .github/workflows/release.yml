@@ -11,6 +11,11 @@ on:
         options:
           - preview
           - publish
+      publish_modrinth:
+        description: Publish the release to Modrinth
+        required: true
+        default: true
+        type: boolean
 
 concurrency:
   group: sorty-release
@@ -47,12 +52,13 @@ jobs:
           MODRINTH_PROJECT_ID: ${{ vars.MODRINTH_PROJECT_ID }}
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
           MODE: ${{ inputs.mode }}
+          PUBLISH_MODRINTH: ${{ inputs.publish_modrinth }}
         run: |
-          if [ -z "$MODRINTH_PROJECT_ID" ]; then
+          if [ "$PUBLISH_MODRINTH" = true ] && [ -z "$MODRINTH_PROJECT_ID" ]; then
             echo "::error::Repository variable MODRINTH_PROJECT_ID is not configured."
             exit 1
           fi
-          if [ "$MODE" = publish ] && [ -z "$MODRINTH_TOKEN" ]; then
+          if [ "$PUBLISH_MODRINTH" = true ] && [ "$MODE" = publish ] && [ -z "$MODRINTH_TOKEN" ]; then
             echo "::error::Actions secret MODRINTH_TOKEN is not configured."
             exit 1
           fi
@@ -62,11 +68,18 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
           MODRINTH_PROJECT_ID: ${{ vars.MODRINTH_PROJECT_ID }}
+          PUBLISH_MODRINTH: ${{ inputs.publish_modrinth }}
         run: |
-          uv run --frozen scripts/release.py discover \
-            --repository "$GITHUB_REPOSITORY" \
-            --modrinth-project-id "$MODRINTH_PROJECT_ID" \
+          args=(
+            discover
+            --repository "$GITHUB_REPOSITORY"
+            --modrinth-project-id "$MODRINTH_PROJECT_ID"
             --output release-discovery.json
+          )
+          if [ "$PUBLISH_MODRINTH" != true ]; then
+            args+=(--skip-modrinth)
+          fi
+          uv run --frozen scripts/release.py "${args[@]}"
           candidates="$(uv run --frozen python -c 'import json; print(json.dumps(json.load(open("release-discovery.json"))["candidates"], separators=(",", ":")))')"
           count="$(uv run --frozen python -c 'import json; print(len(json.load(open("release-discovery.json"))["candidates"]))')"
           echo "candidates=$candidates" >> "$GITHUB_OUTPUT"
@@ -251,7 +264,7 @@ jobs:
             fi
           done
       - name: publish to Modrinth
-        if: inputs.mode == 'publish'
+        if: inputs.mode == 'publish' && inputs.publish_modrinth
         env:
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
           MODRINTH_PROJECT_ID: ${{ vars.MODRINTH_PROJECT_ID }}

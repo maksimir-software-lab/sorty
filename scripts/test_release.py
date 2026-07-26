@@ -81,6 +81,7 @@ class CandidateTest(unittest.TestCase):
         modrinth=(),
         published_modrinth=(),
         listed_modrinth=(),
+        require_modrinth=True,
     ):
         return release_candidate(
             ReleaseIdentity("26.2", SemVer.parse(current)),
@@ -89,6 +90,7 @@ class CandidateTest(unittest.TestCase):
             modrinth_version_numbers=modrinth,
             published_modrinth_version_numbers=published_modrinth,
             listed_modrinth_version_numbers=listed_modrinth,
+            require_modrinth=require_modrinth,
         )
 
     def test_first_release(self):
@@ -115,6 +117,18 @@ class CandidateTest(unittest.TestCase):
                 [tag],
                 published_modrinth=[tag],
                 listed_modrinth=[tag],
+            ),
+        )
+
+    def test_github_only_release_is_complete_when_modrinth_is_skipped(self):
+        tag = "sorty-1.0.1+26.2-fabric"
+        self.assertEqual(
+            ("complete", None),
+            self.candidate(
+                "1.0.1",
+                published=[tag],
+                all_tags=[tag],
+                require_modrinth=False,
             ),
         )
 
