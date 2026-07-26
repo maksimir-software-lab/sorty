@@ -2,8 +2,6 @@ package nitodeco.sorty.client.mixin;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
-import net.minecraft.client.input.KeyEvent;
-import net.minecraft.client.input.MouseButtonEvent;
 import nitodeco.sorty.client.ClientSortController;
 import nitodeco.sorty.client.SortyKeyMappings;
 import org.spongepowered.asm.mixin.Mixin;
@@ -15,8 +13,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class AbstractContainerScreenMixin {
 	@Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
 	private void sorty$handleSortClick(
-		MouseButtonEvent event,
-		boolean doubleClick,
+		double mouseX,
+		double mouseY,
+		int button,
 		CallbackInfoReturnable<Boolean> callback
 	) {
 
@@ -26,7 +25,7 @@ public abstract class AbstractContainerScreenMixin {
 			return;
 		}
 
-		if (!SortyKeyMappings.sortInventory().matchesMouse(event)) {
+		if (!SortyKeyMappings.sortInventory().matchesMouse(button)) {
 			return;
 		}
 
@@ -37,12 +36,17 @@ public abstract class AbstractContainerScreenMixin {
 	}
 
 	@Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true)
-	private void sorty$lockInputDuringSort(KeyEvent event, CallbackInfoReturnable<Boolean> callback) {
+	private void sorty$lockInputDuringSort(
+		int keyCode,
+		int scanCode,
+		int modifiers,
+		CallbackInfoReturnable<Boolean> callback
+	) {
 
 		if (ClientSortController.isMultiplayerSortActive()) {
 			Minecraft minecraft = Minecraft.getInstance();
 
-			if (event.key() == 256 || minecraft.options.keyInventory.matches(event)) {
+			if (keyCode == 256 || minecraft.options.keyInventory.matches(keyCode, scanCode)) {
 				ClientSortController.cancelMultiplayerSortAndClose();
 			}
 
@@ -51,7 +55,7 @@ public abstract class AbstractContainerScreenMixin {
 			return;
 		}
 
-		if (SortyKeyMappings.sortInventory().matches(event)
+		if (SortyKeyMappings.sortInventory().matches(keyCode, scanCode)
 				&& ClientSortController.trySort((AbstractContainerScreen<?>) (Object) this)) {
 			callback.setReturnValue(true);
 		}

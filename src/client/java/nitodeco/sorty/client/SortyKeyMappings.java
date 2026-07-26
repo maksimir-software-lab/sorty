@@ -3,13 +3,9 @@ package nitodeco.sorty.client;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.KeyMapping;
-import net.minecraft.resources.ResourceLocation;
 import org.lwjgl.glfw.GLFW;
 
 public final class SortyKeyMappings {
-	private static final KeyMapping.Category CATEGORY = KeyMapping.Category
-			.register(ResourceLocation.fromNamespaceAndPath("sorty", "sorty"));
-
 	private static KeyMapping sortInventory;
 
 	private SortyKeyMappings() {
@@ -22,7 +18,7 @@ public final class SortyKeyMappings {
 		}
 
 		sortInventory = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.sorty.sort_inventory",
-				InputConstants.Type.MOUSE, GLFW.GLFW_MOUSE_BUTTON_MIDDLE, CATEGORY));
+				InputConstants.Type.MOUSE, GLFW.GLFW_MOUSE_BUTTON_MIDDLE, "key.category.sorty.sorty"));
 	}
 
 	public static KeyMapping sortInventory() {
