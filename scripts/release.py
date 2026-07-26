@@ -343,11 +343,6 @@ def discover(args: argparse.Namespace) -> int:
             identity = ReleaseIdentity(
                 minecraft_version, SemVer.parse(raw_mod_version), mod_loader
             )
-            existing_target = tag_target(identity.tag)
-            if existing_target and existing_target != sha:
-                raise ReleaseError(
-                    f"{identity.tag} points to {existing_target}, not branch head {sha}"
-                )
             state, previous_tag = release_candidate(
                 identity,
                 published_github_tags=published_tags,
@@ -360,6 +355,11 @@ def discover(args: argparse.Namespace) -> int:
             if state == "complete":
                 skipped.append({"branch": branch, "reason": "already published"})
                 continue
+            existing_target = tag_target(identity.tag)
+            if existing_target and existing_target != sha:
+                raise ReleaseError(
+                    f"{identity.tag} points to {existing_target}, not branch head {sha}"
+                )
             candidates.append(
                 {
                     "branch": branch,
