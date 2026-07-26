@@ -13,6 +13,7 @@ from release import (
     ReleaseIdentity,
     SemVer,
     modrinth_metadata,
+    modrinth_release_tags,
     parse_properties,
     parse_tag,
     release_candidate,
@@ -217,6 +218,7 @@ class ModrinthMetadataTest(unittest.TestCase):
     def test_fabric_api_is_a_required_dependency(self):
         identity = ReleaseIdentity("26.2", SemVer.parse("1.0.1"))
         metadata = modrinth_metadata(identity, "26.2", "Changes")
+        self.assertEqual("1.0.1", metadata["version_number"])
         self.assertEqual(
             [
                 {
@@ -273,10 +275,34 @@ class ModrinthMetadataTest(unittest.TestCase):
             version_id, token, metadata = modify.call_args.args
             self.assertEqual("version-id", version_id)
             self.assertEqual("token", token)
+            self.assertEqual("1.0.1", metadata["version_number"])
             self.assertEqual("listed", metadata["status"])
             self.assertEqual(
                 FABRIC_API_PROJECT_ID, metadata["dependencies"][0]["project_id"]
             )
+
+    def test_normalizes_modrinth_version_numbers_to_release_tags(self):
+        canonical = {
+            "version_number": "1.0.1",
+            "game_versions": ["26.2"],
+            "loaders": ["fabric"],
+        }
+        legacy = {
+            "version_number": "sorty-1.0.0+26.2-fabric",
+            "game_versions": ["26.2"],
+            "loaders": ["fabric"],
+        }
+        self.assertEqual(
+            {
+                "sorty-1.0.0+26.2-fabric",
+                "sorty-1.0.1+26.2-fabric",
+            },
+            modrinth_release_tags([canonical, legacy]),
+        )
+        self.assertEqual(
+            {"sorty-1.0.1+26.2-fabric"},
+            modrinth_release_tags([canonical, legacy], canonical_only=True),
+        )
 
 
 if __name__ == "__main__":

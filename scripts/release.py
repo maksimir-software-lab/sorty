@@ -195,6 +195,30 @@ def parse_tag(tag: str) -> ReleaseIdentity | None:
     )
 
 
+def modrinth_release_tags(
+    versions: Iterable[dict[str, Any]], *, canonical_only: bool = False
+) -> set[str]:
+    tags: set[str] = set()
+    for version in versions:
+        version_number = version.get("version_number", "")
+        tagged_identity = parse_tag(version_number)
+        if tagged_identity:
+            if not canonical_only:
+                tags.add(tagged_identity.tag)
+            continue
+        try:
+            mod_version = SemVer.parse(version_number)
+        except ReleaseError:
+            continue
+        for minecraft_version in version.get("game_versions", []):
+            for mod_loader in version.get("loaders", []):
+                if LOADER_PATTERN.fullmatch(mod_loader):
+                    tags.add(
+                        ReleaseIdentity(minecraft_version, mod_version, mod_loader).tag
+                    )
+    return tags
+
+
 def release_candidate(
     identity: ReleaseIdentity,
     *,
@@ -276,17 +300,16 @@ def discover(args: argparse.Namespace) -> int:
             args.modrinth_project_id, os.environ.get("MODRINTH_TOKEN")
         )
     )
-    modrinth_numbers = {version["version_number"] for version in modrinth}
-    published_modrinth_numbers = {
-        version["version_number"]
+    modrinth_numbers = modrinth_release_tags(modrinth)
+    published_modrinth_numbers = modrinth_release_tags(
+        version
         for version in modrinth
         if version.get("status") in {"listed", "archived", "unlisted"}
-    }
-    listed_modrinth_numbers = {
-        version["version_number"]
-        for version in modrinth
-        if version.get("status") == "listed"
-    }
+    )
+    listed_modrinth_numbers = modrinth_release_tags(
+        (version for version in modrinth if version.get("status") == "listed"),
+        canonical_only=True,
+    )
 
     refs = run_git(
         "for-each-ref",
@@ -436,7 +459,7 @@ def modrinth_metadata(
 ) -> dict[str, Any]:
     return {
         "name": identity.title,
-        "version_number": identity.tag,
+        "version_number": str(identity.mod_version),
         "changelog": changelog,
         "dependencies": (
             [
@@ -498,7 +521,16 @@ def sync_modrinth(args: argparse.Namespace) -> int:
 
     versions = modrinth_versions(args.project_id, token)
     existing = next(
-        (version for version in versions if version["version_number"] == identity.tag),
+        (
+            version
+            for version in versions
+            if version.get("version_number") == identity.tag
+            or (
+                version.get("version_number") == str(identity.mod_version)
+                and args.minecraft_version in version.get("game_versions", [])
+                and args.mod_loader in version.get("loaders", [])
+            )
+        ),
         None,
     )
     if existing:
