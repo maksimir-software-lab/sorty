@@ -9,6 +9,9 @@
 			"nitodeco.sorty.gametest.SortyClientGameTest"
 		]
 	},
+	"mixins": [
+		"sorty.gametest.mixins.json"
+	],
 	"depends": {
 		"fabricloader": "*",
 		"minecraft": "*",
