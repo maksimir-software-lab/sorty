@@ -1,7 +1,7 @@
 {
 	"required": true,
 	"package": "nitodeco.sorty.client.mixin",
-	"compatibilityLevel": "JAVA_25",
+	"compatibilityLevel": "JAVA_21",
 	"client": [
 		"AbstractContainerScreenMixin"
 	],

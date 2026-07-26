@@ -7,7 +7,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ContainerInput;
+import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import nitodeco.sorty.inventory.InventoryClickPlanner;
@@ -92,7 +92,7 @@ public final class MultiplayerSortExecutor {
 		}
 
 		activeSession = new Session(screen, menu, List.copyOf(menuSlotIds), actions);
-		minecraft.player.sendOverlayMessage(Component.literal("Sorting..."));
+		minecraft.player.displayClientMessage(Component.literal("Sorting..."), true);
 
 		return true;
 	}
@@ -117,7 +117,7 @@ public final class MultiplayerSortExecutor {
 
 		Session session = activeSession;
 
-		if (minecraft.player == null || minecraft.gameMode == null || minecraft.gui.screen() != session.screen
+		if (minecraft.player == null || minecraft.gameMode == null || minecraft.screen != session.screen
 				|| minecraft.player.containerMenu != session.menu) {
 			activeSession = null;
 
@@ -127,7 +127,7 @@ public final class MultiplayerSortExecutor {
 		session.elapsedTicks++;
 
 		if (session.elapsedTicks % 20 == 0) {
-			minecraft.player.sendOverlayMessage(Component.literal("Sorting..."));
+			minecraft.player.displayClientMessage(Component.literal("Sorting..."), true);
 		}
 
 		if (session.settleTicks-- > 0) {
@@ -137,7 +137,7 @@ public final class MultiplayerSortExecutor {
 		if (session.lastCompletedAction >= 0 && (!session.menu.getCarried().isEmpty()
 				|| !matchesExpectedLayout(session, session.lastCompletedAction))) {
 			activeSession = null;
-			minecraft.player.sendOverlayMessage(Component.literal("Sorting stopped: inventory changed"));
+			minecraft.player.displayClientMessage(Component.literal("Sorting stopped: inventory changed"), true);
 
 			return;
 		}
@@ -149,7 +149,7 @@ public final class MultiplayerSortExecutor {
 			if (shouldClose) {
 				session.screen.onClose();
 			} else {
-				minecraft.player.sendOverlayMessage(Component.literal("Sorted"));
+				minecraft.player.displayClientMessage(Component.literal("Sorted"), true);
 			}
 
 			return;
@@ -161,8 +161,8 @@ public final class MultiplayerSortExecutor {
 			InventoryClickPlanner.Action<ItemStack> action = session.actions.get(session.nextAction);
 
 			for (int sortableSlot : action.slots()) {
-				minecraft.gameMode.handleContainerInput(session.menu.containerId, session.menuSlotIds.get(sortableSlot),
-						0, ContainerInput.PICKUP, minecraft.player);
+				minecraft.gameMode.handleInventoryMouseClick(session.menu.containerId,
+						session.menuSlotIds.get(sortableSlot), 0, ClickType.PICKUP, minecraft.player);
 				session.menu.incrementStateId();
 			}
 

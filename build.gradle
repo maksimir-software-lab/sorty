@@ -1,5 +1,5 @@
 plugins {
-	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+	id 'net.fabricmc.fabric-loom-remap' version "${loom_version}"
 	id 'maven-publish'
 	id 'com.diffplug.spotless' version '8.8.0'
 }
@@ -39,10 +39,11 @@ fabricApi {
 dependencies {
 	// To change the versions see the gradle.properties file
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	mappings loom.officialMojangMappings()
+	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
-	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 	productionRuntimeMods "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
 	testImplementation platform("org.junit:junit-bom:5.13.4")
@@ -159,9 +160,16 @@ test {
 }
 
 def gametestJar = tasks.register("gametestJar", Jar) {
-	archiveClassifier = "gametest"
+	archiveClassifier = "gametest-dev"
 	destinationDirectory = layout.buildDirectory.dir("gametest")
 	from sourceSets.gametest.output
+}
+
+def remapGametestJar = tasks.register("remapGametestJar", net.fabricmc.loom.task.RemapJarTask) {
+	dependsOn gametestJar
+	inputFile = gametestJar.flatMap { it.archiveFile }
+	archiveClassifier = "gametest"
+	destinationDirectory = layout.buildDirectory.dir("gametest")
 }
 
 def clientGameTestRunDirectory = layout.buildDirectory.dir("run/clientGameTest")
@@ -172,8 +180,8 @@ def deleteProductionClientGameTestRunDir = tasks.register("deleteProductionClien
 
 tasks.register("runProductionClientGameTest", net.fabricmc.loom.task.prod.ClientProductionRunTask) {
 	dependsOn deleteProductionClientGameTestRunDir
-	dependsOn gametestJar
-	mods.from gametestJar.flatMap { it.archiveFile }
+	dependsOn remapGametestJar
+	mods.from remapGametestJar.flatMap { it.archiveFile }
 	jvmArgs.add("-Dfabric.client.gametest")
 	runDir = clientGameTestRunDirectory
 	useXVFB = System.getenv("CI") != null

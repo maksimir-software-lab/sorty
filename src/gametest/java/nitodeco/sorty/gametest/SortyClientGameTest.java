@@ -29,7 +29,7 @@ public final class SortyClientGameTest implements FabricClientGameTest {
 		context.runOnClient(SortyClientGameTest::assertKnownLocaleIds);
 
 		try (TestSingleplayerContext singleplayer = context.worldBuilder().create()) {
-			singleplayer.getClientLevel().waitForChunksRender();
+			singleplayer.getClientWorld().waitForChunksRender();
 			context.takeScreenshot("sorty-startup-smoke");
 			testDefaultKeySort(context, singleplayer);
 			testRemappedKeySort(context, singleplayer);

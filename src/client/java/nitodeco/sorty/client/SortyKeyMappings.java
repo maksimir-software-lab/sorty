@@ -1,7 +1,7 @@
 package nitodeco.sorty.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.resources.Identifier;
 import org.lwjgl.glfw.GLFW;
@@ -21,7 +21,7 @@ public final class SortyKeyMappings {
 			throw new IllegalStateException("Sorty key mappings are already registered");
 		}
 
-		sortInventory = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.sorty.sort_inventory",
+		sortInventory = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.sorty.sort_inventory",
 				InputConstants.Type.MOUSE, GLFW.GLFW_MOUSE_BUTTON_MIDDLE, CATEGORY));
 	}
 
