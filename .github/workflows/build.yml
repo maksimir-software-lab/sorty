@@ -12,15 +12,27 @@ jobs:
     steps:
       - name: checkout repository
         uses: actions/checkout@v6
+      - name: setup uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          enable-cache: true
+          version: '0.11.32'
+          python-version: '3.12.13'
       - name: validate gradle wrapper
         uses: gradle/actions/wrapper-validation@v6
       - name: setup jdk
         uses: actions/setup-java@v5
         with:
-          java-version: '25'
+          java-version: '25.0.4'
           distribution: 'microsoft'
       - name: make gradle wrapper executable
         run: chmod +x ./gradlew
+      - name: lint release tooling
+        run: |
+          uv run --frozen ruff format --check scripts
+          uv run --frozen ruff check scripts
+      - name: test release tooling
+        run: uv run --frozen scripts/test_release.py
       - name: build
         run: ./gradlew build
       - name: capture build artifacts

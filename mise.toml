@@ -1,0 +1,22 @@
+min_version = "2026.7.12"
+
+[tools]
+java = "microsoft-25.0.4"
+python = "3.12.13"
+uv = "0.11.32"
+actionlint = "1.7.12"
+
+[tasks.test-release]
+description = "Run release test"
+run = "uv run --frozen scripts/test_release.py"
+
+[tasks.lint-python]
+description = "Lint python code"
+run = """
+uv run --frozen ruff format --check scripts
+uv run --frozen ruff check scripts
+"""
+
+[tasks.check-actions]
+description = "Validate gh actions"
+run = "actionlint"

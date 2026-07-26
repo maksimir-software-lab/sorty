@@ -39,5 +39,11 @@ replay_*.log
 *.hprof
 *.jfr
 
+# python
+
+__pycache__/
+*.py[cod]
+.venv/
+
 # local setup
 AGENTS.md

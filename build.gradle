@@ -161,7 +161,7 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 tasks.withType(Jar).configureEach {
-	archiveVersion = "${project.version}-${project.minecraft_version}"
+	archiveVersion = "${project.version}+${project.minecraft_version}-${project.mod_loader}"
 }
 
 java {

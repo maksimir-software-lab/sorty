@@ -1,0 +1,284 @@
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Preview candidates or publish them
+        required: true
+        default: preview
+        type: choice
+        options:
+          - preview
+          - publish
+
+concurrency:
+  group: sorty-release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  discover:
+    name: discover releases
+    runs-on: ubuntu-24.04
+    outputs:
+      candidates: ${{ steps.discover.outputs.candidates }}
+      count: ${{ steps.discover.outputs.count }}
+    steps:
+      - name: checkout release tooling
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: setup uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          enable-cache: true
+          version: '0.11.32'
+          python-version: '3.12.13'
+      - name: fetch release branches and tags
+        run: |
+          git fetch --prune origin \
+            '+refs/heads/mc/*:refs/remotes/origin/mc/*' \
+            '+refs/tags/*:refs/tags/*'
+      - name: validate configuration
+        env:
+          MODRINTH_PROJECT_ID: ${{ vars.MODRINTH_PROJECT_ID }}
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          MODE: ${{ inputs.mode }}
+        run: |
+          if [ -z "$MODRINTH_PROJECT_ID" ]; then
+            echo "::error::Repository variable MODRINTH_PROJECT_ID is not configured."
+            exit 1
+          fi
+          if [ "$MODE" = publish ] && [ -z "$MODRINTH_TOKEN" ]; then
+            echo "::error::Actions secret MODRINTH_TOKEN is not configured."
+            exit 1
+          fi
+      - name: discover release candidates
+        id: discover
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          MODRINTH_PROJECT_ID: ${{ vars.MODRINTH_PROJECT_ID }}
+        run: |
+          uv run --frozen scripts/release.py discover \
+            --repository "$GITHUB_REPOSITORY" \
+            --modrinth-project-id "$MODRINTH_PROJECT_ID" \
+            --output release-discovery.json
+          candidates="$(uv run --frozen python -c 'import json; print(json.dumps(json.load(open("release-discovery.json"))["candidates"], separators=(",", ":")))')"
+          count="$(uv run --frozen python -c 'import json; print(len(json.load(open("release-discovery.json"))["candidates"]))')"
+          echo "candidates=$candidates" >> "$GITHUB_OUTPUT"
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+      - name: summarize discovery
+        env:
+          MODE: ${{ inputs.mode }}
+        run: |
+          uv run --frozen python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          import os
+
+          result = json.load(open("release-discovery.json", encoding="utf-8"))
+          print(f"## Release {os.environ['MODE']}")
+          print()
+          if result["candidates"]:
+              print("| Branch | Version | Minecraft | State | Tag |")
+              print("|---|---:|---:|---|---|")
+              for item in result["candidates"]:
+                  print(
+                      f"| `{item['branch']}` | `{item['mod_version']}` | "
+                      f"`{item['minecraft_version']}` / `{item['mod_loader']}` | "
+                      f"{item['state']} | "
+                      f"`{item['tag']}` |"
+                  )
+          else:
+              print("No release candidates.")
+          if result["skipped"]:
+              print()
+              print("### Skipped")
+              for item in result["skipped"]:
+                  print(f"- `{item['branch']}`: {item['reason']}")
+          PY
+
+  release:
+    name: ${{ inputs.mode }} ${{ matrix.release.tag }}
+    needs: discover
+    if: needs.discover.outputs.count != '0'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        release: ${{ fromJSON(needs.discover.outputs.candidates) }}
+    steps:
+      - name: checkout trusted release tooling
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          path: release-tooling
+      - name: checkout captured commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ matrix.release.sha }}
+          fetch-depth: 0
+          path: source
+      - name: setup uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          enable-cache: true
+          version: '0.11.32'
+          python-version: '3.12.13'
+          working-directory: release-tooling
+      - name: fetch release tags
+        working-directory: source
+        run: git fetch origin '+refs/tags/*:refs/tags/*'
+      - name: validate gradle wrapper
+        uses: gradle/actions/wrapper-validation@v6
+      - name: setup jdk
+        uses: actions/setup-java@v5
+        with:
+          java-version: '25.0.4'
+          distribution: microsoft
+      - name: make gradle wrapper executable
+        run: chmod +x source/gradlew
+      - name: lint release tooling
+        working-directory: release-tooling
+        run: |
+          uv run --frozen ruff format --check scripts
+          uv run --frozen ruff check scripts
+      - name: test release tooling
+        working-directory: release-tooling
+        run: uv run --frozen scripts/test_release.py
+      - name: build and test
+        working-directory: source
+        run: ./gradlew build
+      - name: verify release artifacts
+        run: |
+          uv run --project release-tooling --frozen release-tooling/scripts/release.py verify-artifacts \
+            --directory source/build/libs \
+            --minecraft-version '${{ matrix.release.minecraft_version }}' \
+            --mod-version '${{ matrix.release.mod_version }}' \
+            --mod-loader '${{ matrix.release.mod_loader }}'
+      - name: generate release notes
+        working-directory: source
+        run: |
+          uv run --project ../release-tooling --frozen ../release-tooling/scripts/release.py notes \
+            --sha '${{ matrix.release.sha }}' \
+            --previous-tag '${{ matrix.release.previous_tag }}' \
+            --output ../release-notes.md
+      - name: preview
+        if: inputs.mode == 'preview'
+        run: |
+          {
+            echo "## Preview: \`${{ matrix.release.tag }}\`"
+            echo
+            echo "- Branch: \`${{ matrix.release.branch }}\`"
+            echo "- Commit: \`${{ matrix.release.sha }}\`"
+            echo "- Type: \`${{ matrix.release.release_type }}\`"
+            echo "- Loader: \`${{ matrix.release.mod_loader }}\`"
+            echo "- Artifact: \`${{ matrix.release.primary_artifact }}\`"
+            echo
+            echo "### Generated notes"
+            cat release-notes.md
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: create tag and draft GitHub release
+        if: inputs.mode == 'publish'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ matrix.release.tag }}
+          SHA: ${{ matrix.release.sha }}
+          TITLE: ${{ matrix.release.title }}
+          RELEASE_TYPE: ${{ matrix.release.release_type }}
+        run: |
+          existing_target="$(git -C source rev-list -n 1 "$TAG" 2>/dev/null || true)"
+          if [ -n "$existing_target" ] && [ "$existing_target" != "$SHA" ]; then
+            echo "::error::Tag $TAG points to $existing_target instead of $SHA."
+            exit 1
+          fi
+          if [ -z "$existing_target" ]; then
+            git -C source config user.name "github-actions[bot]"
+            git -C source config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git -C source tag -a "$TAG" "$SHA" -m "$TITLE"
+            git -C source push origin "refs/tags/$TAG"
+          fi
+
+          expected_prerelease=false
+          if [ "$RELEASE_TYPE" = "beta" ]; then
+            expected_prerelease=true
+          fi
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            actual_prerelease="$(gh release view "$TAG" --json isPrerelease --jq .isPrerelease)"
+            if [ "$actual_prerelease" != "$expected_prerelease" ]; then
+              echo "::error::Existing GitHub release has the wrong prerelease classification."
+              exit 1
+            fi
+            gh release edit "$TAG" \
+              --title "$TITLE" \
+              --notes-file release-notes.md
+          else
+            args=(--draft --target "$SHA" --title "$TITLE" --notes-file release-notes.md)
+            if [ "$expected_prerelease" = true ]; then
+              args+=(--prerelease)
+            fi
+            gh release create "$TAG" "${args[@]}"
+          fi
+      - name: upload GitHub release assets
+        if: inputs.mode == 'publish'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ matrix.release.tag }}
+          PRIMARY: ${{ matrix.release.primary_artifact }}
+          SOURCES: ${{ matrix.release.sources_artifact }}
+        run: |
+          mkdir -p existing-assets
+          for artifact in "$PRIMARY" "$SOURCES"; do
+            local_path="source/build/libs/$artifact"
+            rm -f "existing-assets/$artifact"
+            if gh release download "$TAG" --pattern "$artifact" --dir existing-assets >/dev/null 2>&1; then
+              if ! cmp --silent "$local_path" "existing-assets/$artifact"; then
+                echo "::error::GitHub release asset $artifact exists with different contents."
+                exit 1
+              fi
+              echo "$artifact already matches the GitHub release."
+            else
+              gh release upload "$TAG" "$local_path"
+            fi
+          done
+      - name: publish to Modrinth
+        if: inputs.mode == 'publish'
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          MODRINTH_PROJECT_ID: ${{ vars.MODRINTH_PROJECT_ID }}
+        run: |
+          uv run --project release-tooling --frozen release-tooling/scripts/release.py sync-modrinth \
+            --project-id "$MODRINTH_PROJECT_ID" \
+            --minecraft-version '${{ matrix.release.minecraft_version }}' \
+            --mod-version '${{ matrix.release.mod_version }}' \
+            --mod-loader '${{ matrix.release.mod_loader }}' \
+            --primary 'source/build/libs/${{ matrix.release.primary_artifact }}' \
+            --sources 'source/build/libs/${{ matrix.release.sources_artifact }}' \
+            --notes release-notes.md
+      - name: publish GitHub release
+        if: inputs.mode == 'publish'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ matrix.release.tag }}
+        run: gh release edit "$TAG" --draft=false
+      - name: summarize result
+        if: always()
+        env:
+          MODE: ${{ inputs.mode }}
+          TAG: ${{ matrix.release.tag }}
+          STATE: ${{ matrix.release.state }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          echo "## $MODE: \`$TAG\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Discovery state: \`$STATE\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Job result: \`$JOB_STATUS\`" >> "$GITHUB_STEP_SUMMARY"
