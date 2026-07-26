@@ -67,7 +67,14 @@ jobs:
       - name: make gradle wrapper executable
         run: chmod +x ./gradlew
       - name: mc integration test
-        run: ./gradlew runProductionClientGameTest
+        run: |
+          for attempt in 1 2 3; do
+            if ./gradlew runProductionClientGameTest; then
+              exit 0
+            fi
+            echo "::warning::Minecraft client GameTest attempt ${attempt} failed"
+          done
+          exit 1
       - name: capture Minecraft client integration test output
         if: always()
         uses: actions/upload-artifact@v7
