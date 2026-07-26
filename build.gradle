@@ -198,7 +198,7 @@ tasks.withType(JavaCompile).configureEach {
 	it.options.release = project.java_version as Integer
 }
 
-tasks.withType(Jar).configureEach {
+tasks.withType(AbstractArchiveTask).configureEach {
 	archiveVersion = "${project.version}+${project.minecraft_version}-${project.mod_loader}"
 }
 
