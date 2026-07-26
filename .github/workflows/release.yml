@@ -150,10 +150,14 @@ jobs:
         run: git fetch origin '+refs/tags/*:refs/tags/*'
       - name: validate gradle wrapper
         uses: gradle/actions/wrapper-validation@v6
+      - name: resolve java version
+        id: java
+        shell: bash
+        run: echo "version=$(sed -n 's/^java_version=//p' source/gradle.properties)" >> "$GITHUB_OUTPUT"
       - name: setup jdk
         uses: actions/setup-java@v5
         with:
-          java-version: '25'
+          java-version: ${{ steps.java.outputs.version }}
           distribution: microsoft
       - name: make gradle wrapper executable
         run: chmod +x source/gradlew
@@ -167,7 +171,9 @@ jobs:
         run: uv run --frozen scripts/test_release.py
       - name: build and test
         working-directory: source
-        run: ./gradlew build
+        run: |
+          ./gradlew build
+          ./gradlew runProductionClientGameTest
       - name: verify release artifacts
         run: |
           uv run --project release-tooling --frozen release-tooling/scripts/release.py verify-artifacts \
