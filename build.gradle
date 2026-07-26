@@ -185,6 +185,7 @@ tasks.register("runProductionClientGameTest", net.fabricmc.loom.task.prod.Client
 	jvmArgs.add("-Dfabric.client.gametest")
 	runDir = clientGameTestRunDirectory
 	useXVFB = System.getenv("CI") != null
+			&& System.getenv("DISPLAY") == null
 			&& System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("linux")
 }
 
