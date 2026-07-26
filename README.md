@@ -14,7 +14,7 @@
   </a>
 </p>
 
-Sorty is a lightweight, client-side mod that adds fast inventory sorting. The default keybind is the middle mouse button. When sorting an inventory, items are sorted by amount and type. Incomplete stacks of the same item are merged to free more inventory space. Items are grouped by type: Ingots are sorted with ingots, logs with logs, planks with planks.  
+Sorty is a lightweight, client-side mod that adds fast inventory sorting. The default keybind is the middle mouse button. When sorting an inventory, items are sorted by amount and type. Incomplete stacks of the same item are merged to free more inventory space. Items are grouped by type: Ingots are sorted with ingots, logs with logs, planks with planks.
 
 ## Multiplayer
 
