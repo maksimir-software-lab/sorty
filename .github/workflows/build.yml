@@ -41,6 +41,23 @@ jobs:
         run: uv run --frozen scripts/test_release.py
       - name: build
         run: ./gradlew build
+
+  minecraft-integration-test:
+    name: Minecraft integration test
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v6
+      - name: validate gradle wrapper
+        uses: gradle/actions/wrapper-validation@v6
+      - name: setup jdk
+        uses: actions/setup-java@v5
+        with:
+          java-version: '25'
+          distribution: 'microsoft'
+      - name: make gradle wrapper executable
+        run: chmod +x ./gradlew
       - name: run Minecraft client integration test
         run: ./gradlew runProductionClientGameTest
       - name: capture Minecraft client integration test output
