@@ -1,7 +1,6 @@
 package nitodeco.sorty.client.mixin;
 
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
-import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.world.inventory.Slot;
 import nitodeco.sorty.client.ClientSortController;
@@ -14,18 +13,20 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class AbstractContainerScreenMixin {
 	@Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
 	private void sorty$handleMiddleClick(
-			MouseButtonEvent event,
-			boolean doubleClick,
-			CallbackInfoReturnable<Boolean> callback
+		MouseButtonEvent event,
+		boolean doubleClick,
+		CallbackInfoReturnable<Boolean> callback
 	) {
-		if (event.button() != 2 || !((Object) this instanceof InventoryScreen inventoryScreen)) {
+
+		if (event.button() != 2) {
 			return;
 		}
 
-		Slot clickedSlot =
-				((AbstractContainerScreenAccessor) this).sorty$getHoveredSlot(event.x(), event.y());
-		if (ClientSortController.trySort(inventoryScreen, clickedSlot)) {
+		Slot clickedSlot = ((AbstractContainerScreenAccessor) this).sorty$getHoveredSlot(event.x(), event.y());
+
+		if (ClientSortController.trySort((AbstractContainerScreen<?>) (Object) this, clickedSlot)) {
 			callback.setReturnValue(true);
 		}
+
 	}
 }

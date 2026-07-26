@@ -3,7 +3,7 @@
 	"id": "sorty",
 	"version": "${version}",
 	"name": "Sorty",
-	"description": "Middle-click the main player inventory to merge stacks and sort items by type.",
+	"description": "Middle-click player, chest, and shulker storage to merge stacks and sort items by type.",
 	"authors": [
 		"Nico"
 	],

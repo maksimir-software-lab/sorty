@@ -16,16 +16,9 @@ public class Sorty implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
-		PayloadTypeRegistry.serverboundPlay().register(
-				SortInventoryPayload.TYPE,
-				SortInventoryPayload.CODEC
-		);
-		ServerPlayNetworking.registerGlobalReceiver(
-				SortInventoryPayload.TYPE,
-				(payload, context) -> context.server().execute(
-						() -> PlayerInventorySorter.sortIfAllowed(context.player())
-				)
-		);
+		PayloadTypeRegistry.serverboundPlay().register(SortInventoryPayload.TYPE, SortInventoryPayload.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(SortInventoryPayload.TYPE, (payload, context) -> context.server()
+				.execute(() -> PlayerInventorySorter.sortIfAllowed(context.player())));
 		LOGGER.info("Sorty initialized");
 	}
 
