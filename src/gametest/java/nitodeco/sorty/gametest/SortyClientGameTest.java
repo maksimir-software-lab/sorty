@@ -1,21 +1,33 @@
 package nitodeco.sorty.gametest;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.inventory.ContainerScreen;
+import net.minecraft.client.gui.screens.inventory.CraftingScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
+import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.SimpleMenuProvider;
+import net.minecraft.world.inventory.ChestMenu;
+import net.minecraft.world.inventory.CraftingMenu;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.BundleContents;
+import nitodeco.sorty.client.ClientSortController;
+import nitodeco.sorty.client.MultiplayerSortExecutor;
 import nitodeco.sorty.client.SortyKeyMappings;
 import nitodeco.sorty.inventory.PlayerInventorySorter;
 import org.lwjgl.glfw.GLFW;
@@ -40,8 +52,89 @@ public final class SortyClientGameTest implements FabricClientGameTest {
 			context.takeScreenshot("sorty-startup-smoke");
 			testDefaultKeySort(context, singleplayer);
 			testRemappedKeySort(context, singleplayer);
+			testBundleFillPolicy(context, singleplayer);
+			testPlayerSortFromCraftingScreen(context, singleplayer);
+			testChestTargetSelection(context, singleplayer);
 		}
 
+	}
+
+	private static void testBundleFillPolicy(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
+		List<ItemStack> inventory = emptyMainInventory();
+		inventory.set(3, stack(Items.REDSTONE, 7));
+		inventory.set(5, bundleWith(Items.GUNPOWDER, 2));
+		inventory.set(9, stack(Items.GUNPOWDER, 10));
+		seedMainInventory(context, singleplayer, inventory);
+		openInventory(context);
+		context.getInput().pressMouse(GLFW.GLFW_MOUSE_BUTTON_MIDDLE);
+		context.waitFor(client -> {
+			ItemStack bundle = client.player.getInventory().getItem(PlayerInventorySorter.MAIN_INVENTORY_START + 5);
+
+			return bundleCount(bundle, Items.GUNPOWDER) == 12
+					&& bundle.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY).size() == 1;
+		});
+		assertBundlePolicy(context, singleplayer);
+		context.takeScreenshot("sorty-server-bundle-policy");
+		context.setScreen(() -> null);
+
+		seedMainInventory(context, singleplayer, inventory);
+		openInventory(context);
+		triggerClientFallbackPlayerSort(context);
+		context.waitFor(client -> {
+			ItemStack bundle = client.player.getInventory().getItem(PlayerInventorySorter.MAIN_INVENTORY_START + 5);
+
+			return bundleCount(bundle, Items.GUNPOWDER) == 12 && !MultiplayerSortExecutor.isActive();
+		});
+		assertBundlePolicy(context, singleplayer);
+		context.takeScreenshot("sorty-client-fallback-bundle-policy");
+		context.setScreen(() -> null);
+	}
+
+	private static void testPlayerSortFromCraftingScreen(
+		ClientGameTestContext context,
+		TestSingleplayerContext singleplayer
+	) {
+		seedInventory(context, singleplayer);
+		singleplayer.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().getFirst();
+			player.openMenu(new SimpleMenuProvider((id, inventory, owner) -> new CraftingMenu(id, inventory),
+					Component.literal("Crafting")));
+		});
+		context.waitForScreen(CraftingScreen.class);
+		triggerSortOnPlayerSlot(context);
+		waitForSortedInventory(context, "crafting screen player sort");
+		assertServerInventory(singleplayer, expectedInventory(), "crafting screen player sort");
+		context.takeScreenshot("sorty-crafting-player-sort");
+		context.setScreen(() -> null);
+	}
+
+	private static void testChestTargetSelection(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
+		AtomicReference<SimpleContainer> chestReference = new AtomicReference<>();
+		seedInventory(context, singleplayer);
+		singleplayer.getServer().runOnServer(server -> {
+			ServerPlayer player = server.getPlayerList().getPlayers().getFirst();
+			SimpleContainer chest = new SimpleContainer(27);
+			chest.setItem(0, stack(Items.STONE, 30));
+			chest.setItem(8, stack(Items.DIRT, 4));
+			chest.setItem(12, stack(Items.STONE, 40));
+			chestReference.set(chest);
+			player.openMenu(new SimpleMenuProvider((id, inventory, owner) -> ChestMenu.threeRows(id, inventory, chest),
+					Component.literal("Chest")));
+		});
+		context.waitForScreen(ContainerScreen.class);
+		triggerSortOnContainerSlot(context);
+		context.waitFor(client -> chestMatches(client.player.containerMenu.getSlot(0).container));
+		assertChest(chestReference.get(), "server chest target");
+		assertClientInventory(context, chaoticInventory(), "player inventory after chest target");
+		assertServerInventory(singleplayer, chaoticInventory(), "player inventory after chest target");
+
+		seedInventory(context, singleplayer);
+		triggerSortOnPlayerSlot(context);
+		waitForSortedInventory(context, "chest screen player target");
+		assertServerInventory(singleplayer, expectedInventory(), "chest screen player target");
+		assertChest(chestReference.get(), "chest after player target");
+		context.takeScreenshot("sorty-chest-target-selection");
+		context.setScreen(() -> null);
 	}
 
 	private static void testDefaultKeySort(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
@@ -87,7 +180,14 @@ public final class SortyClientGameTest implements FabricClientGameTest {
 	}
 
 	private static void seedInventory(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
-		List<ItemStack> inventory = chaoticInventory();
+		seedMainInventory(context, singleplayer, chaoticInventory());
+	}
+
+	private static void seedMainInventory(
+		ClientGameTestContext context,
+		TestSingleplayerContext singleplayer,
+		List<ItemStack> inventory
+	) {
 		singleplayer.getServer().runOnServer(server -> {
 			ServerPlayer player = server.getPlayerList().getPlayers().getFirst();
 			player.getInventory().clearContent();
@@ -103,6 +203,49 @@ public final class SortyClientGameTest implements FabricClientGameTest {
 		});
 		context.waitFor(client -> inventoryMatches(client.player.getInventory(), inventory));
 		assertHotbarSentinel(context, singleplayer);
+	}
+
+	private static void triggerSortOnPlayerSlot(ClientGameTestContext context) {
+		context.runOnClient(client -> {
+			var screen = (net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?>) client.screen;
+			Slot playerSlot = screen.getMenu().slots.stream()
+					.filter(slot -> slot.container == client.player.getInventory())
+					.filter(slot -> slot.getContainerSlot() >= PlayerInventorySorter.MAIN_INVENTORY_START)
+					.filter(slot -> slot.getContainerSlot() < PlayerInventorySorter.MAIN_INVENTORY_END).findFirst()
+					.orElseThrow();
+
+			if (!ClientSortController.trySort(screen, playerSlot)) {
+				throw new AssertionError("Player inventory sort was not accepted");
+			}
+
+		});
+	}
+
+	private static void triggerSortOnContainerSlot(ClientGameTestContext context) {
+		context.runOnClient(client -> {
+			var screen = (net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?>) client.screen;
+			Slot containerSlot = screen.getMenu().slots.getFirst();
+
+			if (!ClientSortController.trySort(screen, containerSlot)) {
+				throw new AssertionError("Open container sort was not accepted");
+			}
+
+		});
+	}
+
+	private static void triggerClientFallbackPlayerSort(ClientGameTestContext context) {
+		context.runOnClient(client -> {
+			var screen = (net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?>) client.screen;
+			List<Slot> playerSlots = screen.getMenu().slots.stream()
+					.filter(slot -> slot.container == client.player.getInventory())
+					.filter(slot -> slot.getContainerSlot() >= PlayerInventorySorter.MAIN_INVENTORY_START)
+					.filter(slot -> slot.getContainerSlot() < PlayerInventorySorter.MAIN_INVENTORY_END).toList();
+
+			if (!MultiplayerSortExecutor.start(screen, playerSlots)) {
+				throw new AssertionError("Client fallback sort was not accepted");
+			}
+
+		});
 	}
 
 	private static void openInventory(ClientGameTestContext context) {
@@ -216,6 +359,71 @@ public final class SortyClientGameTest implements FabricClientGameTest {
 				stack(Items.DIAMOND_SWORD), stack(Items.IRON_HELMET), stack(Items.APPLE, 3),
 				stack(Items.OAK_SAPLING, 2), stack(Items.WATER_BUCKET), stack(Items.BONE, 5), stack(Items.STICK, 4),
 				ItemStack.EMPTY, ItemStack.EMPTY);
+	}
+
+	private static List<ItemStack> emptyMainInventory() {
+		List<ItemStack> inventory = new ArrayList<>(
+				PlayerInventorySorter.MAIN_INVENTORY_END - PlayerInventorySorter.MAIN_INVENTORY_START);
+
+		while (inventory.size() < PlayerInventorySorter.MAIN_INVENTORY_END
+				- PlayerInventorySorter.MAIN_INVENTORY_START) {
+			inventory.add(ItemStack.EMPTY);
+		}
+
+		return inventory;
+	}
+
+	private static ItemStack bundleWith(Item item, int count) {
+		ItemStack bundle = stack(Items.BUNDLE);
+		bundle.set(DataComponents.BUNDLE_CONTENTS, new BundleContents(List.of(new ItemStack(item, count))));
+
+		return bundle;
+	}
+
+	private static int bundleCount(ItemStack bundle, Item item) {
+		return bundle.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY).itemCopyStream()
+				.filter(stack -> stack.is(item)).mapToInt(ItemStack::getCount).sum();
+	}
+
+	private static void assertBundlePolicy(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
+		context.runOnClient(client -> assertBundlePolicy(client.player.getInventory(), "client bundle policy"));
+		singleplayer.getServer()
+				.runOnServer(server -> assertBundlePolicy(server.getPlayerList().getPlayers().getFirst().getInventory(),
+						"server bundle policy"));
+	}
+
+	private static void assertBundlePolicy(Container inventory, String scenario) {
+		ItemStack bundle = inventory.getItem(PlayerInventorySorter.MAIN_INVENTORY_START + 5);
+		BundleContents contents = bundle.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY);
+
+		if (bundleCount(bundle, Items.GUNPOWDER) != 12 || contents.size() != 1) {
+			throw new AssertionError(scenario + ": expected only 12 gunpowder in anchored bundle, got " + contents);
+		}
+
+		int looseGunpowder = inventoryContents(inventory).stream().filter(stack -> stack.is(Items.GUNPOWDER))
+				.mapToInt(ItemStack::getCount).sum();
+		int looseRedstone = inventoryContents(inventory).stream().filter(stack -> stack.is(Items.REDSTONE))
+				.mapToInt(ItemStack::getCount).sum();
+
+		if (looseGunpowder != 0 || looseRedstone != 7) {
+			throw new AssertionError(scenario + ": expected no loose gunpowder and 7 loose redstone, got "
+					+ inventoryContents(inventory));
+		}
+
+	}
+
+	private static boolean chestMatches(Container chest) {
+		return chest.getItem(0).is(Items.DIRT) && chest.getItem(0).getCount() == 4 && chest.getItem(1).is(Items.STONE)
+				&& chest.getItem(1).getCount() == 64 && chest.getItem(2).is(Items.STONE)
+				&& chest.getItem(2).getCount() == 6;
+	}
+
+	private static void assertChest(Container chest, String scenario) {
+
+		if (!chestMatches(chest)) {
+			throw new AssertionError(scenario + ": unexpected contents " + chest);
+		}
+
 	}
 
 	private static ItemStack stack(Item item) {
