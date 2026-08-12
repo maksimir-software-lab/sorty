@@ -3,7 +3,7 @@
 	"id": "sorty",
 	"version": "${version}",
 	"name": "Sorty",
-	"description": "Client-side inventory, chest, and shulker sorting with atomic singleplayer support.",
+	"description": "Inventory, chest, and shulker sorting with optional instant server-side support.",
 	"authors": [
 		"Nico"
 	],
