@@ -155,6 +155,9 @@ jobs:
         shell: bash
         run: |
           java_version="$(sed -n 's/^java_version=//p' source/gradle.properties | tr -d '\r')"
+          if [ -z "$java_version" ]; then
+            java_version="$(sed -nE 's/^java = "[^0-9]*([0-9]+).*/\1/p' source/mise.toml | tr -d '\r')"
+          fi
           test -n "$java_version"
           echo "version=$java_version" >> "$GITHUB_OUTPUT"
       - name: setup jdk
