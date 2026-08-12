@@ -7,9 +7,9 @@ import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ChestMenu;
-import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.inventory.ShulkerBoxMenu;
 import net.minecraft.world.item.ItemStack;
+import nitodeco.sorty.network.SortTarget;
 
 public final class PlayerInventorySorter {
 	public static final int MAIN_INVENTORY_START = 9;
@@ -18,22 +18,22 @@ public final class PlayerInventorySorter {
 	private PlayerInventorySorter() {
 	}
 
-	public static boolean sortIfAllowed(ServerPlayer player) {
+	public static boolean sortIfAllowed(ServerPlayer player, SortTarget target) {
 		AbstractContainerMenu menu = player.containerMenu;
 
 		if (!menu.getCarried().isEmpty() || !menu.stillValid(player)) {
 			return false;
 		}
 
-		if (menu == player.inventoryMenu && menu instanceof InventoryMenu) {
+		if (target == SortTarget.PLAYER_INVENTORY) {
 			return sortPlayerMainInventory(player, menu);
 		}
 
-		if (menu instanceof ChestMenu chestMenu) {
+		if (target == SortTarget.OPEN_CONTAINER && menu instanceof ChestMenu chestMenu) {
 			return sortContainer(chestMenu.getContainer(), menu);
 		}
 
-		if (menu instanceof ShulkerBoxMenu && !menu.slots.isEmpty()) {
+		if (target == SortTarget.OPEN_CONTAINER && menu instanceof ShulkerBoxMenu && !menu.slots.isEmpty()) {
 			return sortContainer(menu.slots.getFirst().container, menu);
 		}
 

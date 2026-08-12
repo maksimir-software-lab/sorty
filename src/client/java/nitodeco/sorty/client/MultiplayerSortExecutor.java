@@ -9,6 +9,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.BundleItem;
 import net.minecraft.world.item.ItemStack;
 import nitodeco.sorty.inventory.InventoryClickPlanner;
 import nitodeco.sorty.inventory.InventorySortAlgorithm;
@@ -68,8 +69,7 @@ public final class MultiplayerSortExecutor {
 		List<InventoryClickPlanner.Action<ItemStack>> actions;
 
 		try {
-			List<ItemStack> target = InventorySortAlgorithm.sortItemStacks(source);
-			actions = InventoryClickPlanner.plan(source, target, STACK_OPERATIONS);
+			actions = planBundleSafeClicks(source);
 		} catch (IllegalArgumentException invalidInventory) {
 			return false;
 		}
@@ -95,6 +95,44 @@ public final class MultiplayerSortExecutor {
 		minecraft.player.displayClientMessage(Component.literal("Sorting..."), true);
 
 		return true;
+	}
+
+	private static List<InventoryClickPlanner.Action<ItemStack>> planBundleSafeClicks(List<ItemStack> source) {
+		InventorySortAlgorithm.PreparedItemStackSort prepared = InventorySortAlgorithm.prepareItemStackSort(source);
+		List<InventoryClickPlanner.Action<ItemStack>> actions = new ArrayList<>();
+
+		for (InventorySortAlgorithm.BundleTransfer transfer : prepared.bundleTransfers()) {
+			actions.add(new InventoryClickPlanner.Action<>(
+					List.of(transfer.sourceSlot(), transfer.bundleSlot(), transfer.sourceSlot()),
+					transfer.expectedLayout()));
+		}
+
+		List<Integer> movableSlots = new ArrayList<>();
+
+		for (int slot = 0; slot < prepared.bundleFilledLayout().size(); slot++) {
+
+			if (!(prepared.bundleFilledLayout().get(slot).getItem() instanceof BundleItem)) {
+				movableSlots.add(slot);
+			}
+
+		}
+
+		List<ItemStack> movableSource = movableSlots.stream().map(prepared.bundleFilledLayout()::get).toList();
+		List<ItemStack> movableTarget = movableSlots.stream().map(prepared.sortedLayout()::get).toList();
+		List<ItemStack> fullLayout = new ArrayList<>(prepared.bundleFilledLayout());
+
+		for (InventoryClickPlanner.Action<ItemStack> action : InventoryClickPlanner.plan(movableSource, movableTarget,
+				STACK_OPERATIONS)) {
+			List<Integer> mappedClicks = action.slots().stream().map(movableSlots::get).toList();
+
+			for (int movableIndex = 0; movableIndex < movableSlots.size(); movableIndex++) {
+				fullLayout.set(movableSlots.get(movableIndex), action.expectedLayout().get(movableIndex));
+			}
+
+			actions.add(new InventoryClickPlanner.Action<>(mappedClicks, fullLayout));
+		}
+
+		return List.copyOf(actions);
 	}
 
 	public static boolean isActive() {
