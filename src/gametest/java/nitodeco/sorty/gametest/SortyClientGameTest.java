@@ -24,7 +24,6 @@ import net.minecraft.world.inventory.CraftingMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.BundleContents;
 import nitodeco.sorty.client.ClientSortController;
@@ -208,7 +207,7 @@ public final class SortyClientGameTest implements FabricClientGameTest {
 
 	private static void triggerSortOnPlayerSlot(ClientGameTestContext context) {
 		context.runOnClient(client -> {
-			var screen = (net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?>) client.gui.screen();
+			var screen = (net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?>) client.screen;
 			Slot playerSlot = screen.getMenu().slots.stream()
 					.filter(slot -> slot.container == client.player.getInventory())
 					.filter(slot -> slot.getContainerSlot() >= PlayerInventorySorter.MAIN_INVENTORY_START)
@@ -224,7 +223,7 @@ public final class SortyClientGameTest implements FabricClientGameTest {
 
 	private static void triggerSortOnContainerSlot(ClientGameTestContext context) {
 		context.runOnClient(client -> {
-			var screen = (net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?>) client.gui.screen();
+			var screen = (net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?>) client.screen;
 			Slot containerSlot = screen.getMenu().slots.getFirst();
 
 			if (!ClientSortController.trySort(screen, containerSlot)) {
@@ -236,7 +235,7 @@ public final class SortyClientGameTest implements FabricClientGameTest {
 
 	private static void triggerClientFallbackPlayerSort(ClientGameTestContext context) {
 		context.runOnClient(client -> {
-			var screen = (net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?>) client.gui.screen();
+			var screen = (net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?>) client.screen;
 			List<Slot> playerSlots = screen.getMenu().slots.stream()
 					.filter(slot -> slot.container == client.player.getInventory())
 					.filter(slot -> slot.getContainerSlot() >= PlayerInventorySorter.MAIN_INVENTORY_START)
@@ -376,7 +375,7 @@ public final class SortyClientGameTest implements FabricClientGameTest {
 
 	private static ItemStack bundleWith(Item item, int count) {
 		ItemStack bundle = stack(Items.BUNDLE);
-		bundle.set(DataComponents.BUNDLE_CONTENTS, new BundleContents(List.of(new ItemStackTemplate(item, count))));
+		bundle.set(DataComponents.BUNDLE_CONTENTS, new BundleContents(List.of(new ItemStack(item, count))));
 
 		return bundle;
 	}
