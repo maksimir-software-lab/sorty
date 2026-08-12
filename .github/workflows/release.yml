@@ -153,7 +153,10 @@ jobs:
       - name: resolve java version
         id: java
         shell: bash
-        run: echo "version=$(sed -n 's/^java_version=//p' source/gradle.properties)" >> "$GITHUB_OUTPUT"
+        run: |
+          java_version="$(sed -n 's/^java_version=//p' source/gradle.properties | tr -d '\r')"
+          test -n "$java_version"
+          echo "version=$java_version" >> "$GITHUB_OUTPUT"
       - name: setup jdk
         uses: actions/setup-java@v5
         with:
