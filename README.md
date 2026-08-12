@@ -14,11 +14,13 @@
   </a>
 </p>
 
-Sorty is a lightweight, client-side mod that adds fast inventory sorting. The default keybind is the middle mouse button. When sorting an inventory, items are sorted by amount and type. Incomplete stacks of the same item are merged to free more inventory space. Items are grouped by type: Ingots are sorted with ingots, logs with logs, planks with planks.
+Sorty is a lightweight Fabric mod for sorting inventories, chests, and shulker boxes. Middle-click a slot to sort that inventory. This also works while crafting tables, furnaces, and other screens are open. Compatible stacks are merged, then items are grouped by type: ingots with ingots, logs with stripped logs, planks with planks, and so on.
+
+Bundles stay put. Sorty only adds loose items to a bundle if it already contains that item.
 
 ## Multiplayer
 
-Sorty is entirely client-side, you don't need to install it on a server for it to work. Sorting is a bit slower on multiplayer due to rate limits, although in most cases it should feel near-instant.
+Sorty works client-side on any server. Install it on the server too for instant sorting; otherwise it uses vanilla clicks and may take slightly longer.
 
 ## Compatibility
 
