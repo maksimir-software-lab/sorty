@@ -208,7 +208,7 @@ public final class SortyClientGameTest implements FabricClientGameTest {
 
 	private static void triggerSortOnPlayerSlot(ClientGameTestContext context) {
 		context.runOnClient(client -> {
-			var screen = (net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?>) client.gui.screen();
+			var screen = (net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?>) client.screen;
 			Slot playerSlot = screen.getMenu().slots.stream()
 					.filter(slot -> slot.container == client.player.getInventory())
 					.filter(slot -> slot.getContainerSlot() >= PlayerInventorySorter.MAIN_INVENTORY_START)
@@ -224,7 +224,7 @@ public final class SortyClientGameTest implements FabricClientGameTest {
 
 	private static void triggerSortOnContainerSlot(ClientGameTestContext context) {
 		context.runOnClient(client -> {
-			var screen = (net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?>) client.gui.screen();
+			var screen = (net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?>) client.screen;
 			Slot containerSlot = screen.getMenu().slots.getFirst();
 
 			if (!ClientSortController.trySort(screen, containerSlot)) {
@@ -236,7 +236,7 @@ public final class SortyClientGameTest implements FabricClientGameTest {
 
 	private static void triggerClientFallbackPlayerSort(ClientGameTestContext context) {
 		context.runOnClient(client -> {
-			var screen = (net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?>) client.gui.screen();
+			var screen = (net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?>) client.screen;
 			List<Slot> playerSlots = screen.getMenu().slots.stream()
 					.filter(slot -> slot.container == client.player.getInventory())
 					.filter(slot -> slot.getContainerSlot() >= PlayerInventorySorter.MAIN_INVENTORY_START)
