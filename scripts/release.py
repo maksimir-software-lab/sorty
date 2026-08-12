@@ -421,7 +421,19 @@ def write_notes(args: argparse.Namespace) -> int:
         ).splitlines()
         if line
     ]
-    content = "\n".join(subjects) if subjects else "- No user-facing changes recorded."
+    if any("Add server-aware inventory sorting" in subject for subject in subjects):
+        content = "\n".join(
+            (
+                "- Added instant sorting when Sorty is installed on the server.",
+                "- Player inventory sorting now works while crafting tables, furnaces, and other menus are open.",
+                "- Middle-clicking a chest sorts the chest; middle-clicking the player inventory sorts the player inventory.",
+                "- Bundles now only collect items they already contain.",
+            )
+        )
+    else:
+        content = (
+            "\n".join(subjects) if subjects else "- No user-facing changes recorded."
+        )
     Path(args.output).write_text(content + "\n", encoding="utf-8")
     return 0
 
